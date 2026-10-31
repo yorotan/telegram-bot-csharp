@@ -1,4 +1,4 @@
-﻿using Telegram.Bot;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -10,7 +10,6 @@ var options = new TelegramBotClientOptions(
 );
 
 var bot = new TelegramBotClient(options);
-
 var me = await bot.GetMe();
 Console.WriteLine($"бот @{me.Username} запущен.");
 
@@ -25,36 +24,46 @@ async Task OnMessage(Message msg, UpdateType type)
     {
         case "/start":
             var keyboard = new ReplyKeyboardMarkup(new[] {
-                new KeyboardButton[] { "привет", "помощь" },
-                new KeyboardButton[] { "факт о кошке" }
+                new KeyboardButton[] { "котик дня", "предсказание" },
+                new KeyboardButton[] { "помощь" }
             })
             { ResizeKeyboard = true };
-            await bot.SendMessage(msg.Chat, "здравствуйте! выберите действие на клавиатуре ниже.", replyMarkup: keyboard);
+            await bot.SendMessage(msg.Chat, "привет! я бот-предсказатель. выбери, что хочешь:", replyMarkup: keyboard);
             break;
         case "/help":
         case "помощь":
-            await bot.SendMessage(msg.Chat, "команды:\n/start\n/help\n/cat");
+            await bot.SendMessage(msg.Chat, "команды:\n/start\n/help\n/cat — котик дня\n/prediction — предсказание");
             break;
         case "/cat":
-        case "факт о кошке":
-            var facts = new[]
+        case "котик дня":
+            try
             {
-                "кошки спят около 70% своей жизни.",
-                "у кошек потеют только подушечки лап.",
-                "кошки не чувствуют сладкого вкуса.",
-                "мурлыканье кошки может снижать стресс у человека.",
-                "у кошек 32 мышцы в каждом ухе.",
-                "кошки видят в темноте в 6 раз лучше человека."
-            };
-            var random = new Random();
-            var fact = facts[random.Next(facts.Length)];
-            await bot.SendMessage(msg.Chat, $"🐱 {fact}");
+                using var http = new HttpClient();
+                var imageBytes = await http.GetByteArrayAsync($"https://cataas.com/cat?{Guid.NewGuid()}");
+                using var stream = new MemoryStream(imageBytes);
+                await bot.SendPhoto(msg.Chat, new InputFileStream(stream, "cat.jpg"), caption: "твой котик дня 🐱");
+            }
+            catch
+            {
+                await bot.SendMessage(msg.Chat, "котик убежал, попробуй ещё раз 🐾");
+            }
             break;
-        case "привет":
-            await bot.SendMessage(msg.Chat, $"привет, {msg.From?.FirstName}! 👋");
+        case "/prediction":
+        case "предсказание":
+            var predictions = new[]
+            {
+                "сегодня тебя ждёт неожиданная радость 🌟",
+                "хороший день для новых начинаний 🚀",
+                "будь внимателен к мелочам — они важны 💫",
+                "улыбнись, и мир улыбнётся тебе 😊",
+                "время отпустить прошлое и двигаться вперёд 🌿",
+                "скоро ты получишь приятную новость 📩",
+                "доверься интуиции — она не подведёт 🔮"
+            };
+            await bot.SendMessage(msg.Chat, $"🔮 {predictions[new Random().Next(predictions.Length)]}");
             break;
         default:
-            await bot.SendMessage(msg.Chat, $"ты написал: {msg.Text}");
+            await bot.SendMessage(msg.Chat, "я не понял. напиши /help.");
             break;
     }
 }
